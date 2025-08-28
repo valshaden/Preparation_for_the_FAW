@@ -1,0 +1,37 @@
+{
+  "Binance": {
+    "BTCUSDT": 112878.22,
+    "ETHUSDT": 4594.37,
+    "BNBUSDT": 874.83,
+    "LTCUSDT": 113.66,
+    "ADAUSDT": 0.8688,
+    "XRPUSDT": 3.0086,
+    "LINKUSDT": 23.92,
+    "DOGEUSDT": 0.22385,
+    "DOTUSDT": 3.976,
+    "UNIUSDT": 10.022
+  },
+  "CoinGecko": {
+    "BTC": 112882,
+    "ETH": 4592.89,
+    "XRP": 3.01,
+    "DOGE": 0.223758,
+    "ADA": 0.867689,
+    "LINK": 23.88,
+    "LTC": 113.51,
+    "DOT": 3.97,
+    "UNI": 10.01
+  },
+  "CryptoCompare": {
+    "BTC": 112899.83,
+    "ETH": 4595.07,
+    "BNB": 875.04,
+    "ADA": 0.8684,
+    "XRP": 3.009,
+    "DOGE": 0.2239,
+    "DOT": 3.975,
+    "UNI": 10.02,
+    "LTC": 113.66,
+    "LINK": 23.91
+  }
+}

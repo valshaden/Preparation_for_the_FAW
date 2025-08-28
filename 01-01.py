@@ -1,3 +1,4 @@
+# Qwen
 # Получаем курсы криптовалют из разных публичных API
 import requests
 import json

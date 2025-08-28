@@ -1,117 +1,135 @@
-from tkinter import *
-from tkinter import ttk
-from tkinter import messagebox as mb
+'''
+Как работает выбор API:
+CoinGecko
+    Любые: BTC→USD, ETH→RUB, BTC→ETH
+    Универсальный, самый простой
+CoinCap
+    Только через USD (но можно пересчитать в EUR/RUB)
+    Нужно 2 запроса для фиата
+CryptoCompare
+    Например: BTC→USD
+    Требует fsym / tsyms
+Binance
+    Только торговые пары: BTCUSDT, ETHBTC
+    Не поддерживает RUB напрямую
+'''
+# Qwen
+
+import tkinter as tk
+from tkinter import ttk, Toplevel, Text, Scrollbar, Frame, Label
 import requests
+import json
+import pprint
 
-def update_base_label(event):
-    code = base_combobox.get()
-    name = cryptocurrencies[code]
-    b_label.config(text=name)
+# --- Функция для отображения результата в отдельном окне ---
+def show_result_window(title, data):
+    result_window = Toplevel(root)
+    result_window.title(title)
+    result_window.geometry("800x600")
+    result_window.resizable(True, True)
 
-def update_target_label(event):
-    code = target_combobox.get()
-    name = currencies[code]
-    t_label.config(text=name)
+    Label(result_window, text=title, font=("Helvetica", 14, "bold")).pack(pady=10)
 
-def exchange():
-    base_code = base_combobox.get().lower()   # CoinGecko использует lowercase
-    target_code = target_combobox.get().upper()
+    frame = Frame(result_window)
+    frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-    if not base_code or not target_code:
-        mb.showwarning("Внимание", "Выберите обе валюты")
-        return
+    text_widget = Text(frame, wrap=tk.NONE, font=("Courier", 10))
+    text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+    v_scroll = Scrollbar(frame, orient=tk.VERTICAL, command=text_widget.yview)
+    v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    h_scroll = Scrollbar(result_window, orient=tk.HORIZONTAL, command=text_widget.xview)
+    h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+
+    text_widget.config(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+
+    p = pprint.PrettyPrinter(indent=4, width=100, depth=5)
+    formatted_data = p.pformat(data)
+
+    text_widget.insert(tk.END, formatted_data)
+    text_widget.config(state=tk.DISABLED)  # Только для чтения
+
+
+# --- Функции для запросов к API ---
+def fetch_binance():
     try:
-        # Запрос к CoinGecko: получаем цену базовой криптовалюты в целевой валюте
-        url = f"https://api.coingecko.com/api/v3/simple/price"
-        params = {
-            'ids': base_code,
-            'vs_currencies': target_code.lower()
-        }
-        response = requests.get(url, params=params)
+        url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-
-        if base_code in data:
-            rate_data = data[base_code]
-            if target_code.lower() in rate_data:
-                exchange_rate = rate_data[target_code.lower()]
-                base_name = cryptocurrencies[base_code.upper()]
-                target_name = currencies[target_code]
-                mb.showinfo(
-                    "Курс обмена",
-                    f"1 {base_name} = {exchange_rate:,.6f} {target_name}"
-                )
-            else:
-                mb.showerror("Ошибка", f"Курс для {target_code} недоступен")
-        else:
-            mb.showerror("Ошибка", f"Криптовалюта {base_code} не найдена")
-
-    except requests.exceptions.ConnectionError:
-        mb.showerror("Ошибка", "Проверьте подключение к интернету")
-    except requests.exceptions.Timeout:
-        mb.showerror("Ошибка", "Время ожидания истекло")
+        show_result_window("Binance API: BTC/USDT", data)
     except Exception as e:
-        mb.showerror("Ошибка", f"Произошла ошибка: {e}")
+        show_error("Binance", e)
 
-# Словарь криптовалют (код → полное название)
-cryptocurrencies = {
-    "BTC": "Биткойн",
-    "ETH": "Эфириум",
-    "BNB": "Binance Coin",
-    "SOL": "Солана",
-    "XRP": "Риппл",
-    "DOGE": "Догекоин",
-    "ADA": "Кардано",
-    "TRX": "Трон",
-    "DOT": "Полкадот",
-    "MATIC": "Матич"
-}
+def fetch_coingecko():
+    try:
+        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        show_result_window("CoinGecko API: Bitcoin (USD)", data)
+    except Exception as e:
+        show_error("CoinGecko", e)
 
-# Словарь целевых валют (можно фиат и крипта)
-currencies = {
-    "USD": "Доллар США",
-    "EUR": "Евро",
-    "RUB": "Российский рубль",
-    "GBP": "Фунт стерлингов",
-    "JPY": "Японская иена",
-    "BTC": "Биткойн",
-    "ETH": "Эфириум",
-    "BNB": "Binance Coin"
-}
+def fetch_cryptocompare():
+    try:
+        url = "https://min-api.cryptocompare.com/data/pricemultifull"
+        params = {'fsyms': 'BTC', 'tsyms': 'USD'}
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        show_result_window("CryptoCompare: BTC → USD", data)
+    except Exception as e:
+        show_error("CryptoCompare", e)
 
-# Создание окна
-window = Tk()
-window.title("Конвертер криптовалют")
-window.geometry("400x380")
-window.resizable(False, False)
 
-# Интерфейс
-Label(window, text="Базовая криптовалюта:", font=("Arial", 10)).pack(pady=5)
-base_combobox = ttk.Combobox(window, values=list(cryptocurrencies.keys()), state="readonly")
-base_combobox.pack(pady=5)
-base_combobox.bind("<<ComboboxSelected>>", update_base_label)
+# --- Обработка ошибок ---
+def show_error(source, error):
+    error_window = Toplevel(root)
+    error_window.title("Ошибка")
+    error_window.geometry("500x200")
+    Label(
+        error_window,
+        text=f"Ошибка при запросе к {source}:",
+        font=("Helvetica", 12, "bold"),
+        fg="red"
+    ).pack(pady=10)
+    text_widget = Text(error_window, wrap=tk.WORD, font=("Courier", 10), height=6)
+    text_widget.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
+    text_widget.insert(tk.END, str(error))
+    text_widget.config(state=tk.DISABLED)
 
-b_label = ttk.Label(window, text="", foreground="blue", font=("Arial", 9, "italic"))
-b_label.pack(pady=5)
 
-Label(window, text="Целевая валюта:", font=("Arial", 10)).pack(pady=5)
-target_combobox = ttk.Combobox(window, values=list(currencies.keys()), state="readonly")
-target_combobox.pack(pady=5)
-target_combobox.bind("<<ComboboxSelected>>", update_target_label)
+# --- Обработчик кнопки "Получить данные" ---
+def on_fetch():
+    selection = api_combobox.get()
+    if selection == "Binance Public API":
+        fetch_binance()
+    elif selection == "CoinGecko":
+        fetch_coingecko()
+    elif selection == "CryptoCompare":
+        fetch_cryptocompare()
+    else:
+        show_error("Выбор API", "Не выбран корректный источник данных.")
 
-t_label = ttk.Label(window, text="", foreground="blue", font=("Arial", 9, "italic"))
-t_label.pack(pady=5)
 
-# Кнопка
-Button(
-    window,
-    text="Получить курс обмена",
-    background="green",
-    foreground="white",
-    font=("Arial", 10, "bold"),
-    command=exchange
-).pack(pady=20)
+# --- Основное окно ---
+root = tk.Tk()
+root.title("Криптовалютный курс — Выбор API")
+root.geometry("400x200")
+root.resizable(False, False)
+
+# Заголовок
+Label(root, text="Выберите источник данных", font=("Helvetica", 14, "bold")).pack(pady=20)
+
+# Выпадающий список с тремя API
+api_options = ["Binance Public API", "CoinGecko", "CryptoCompare"]
+api_combobox = ttk.Combobox(root, values=api_options, state="readonly", width=30, font=("Helvetica", 11))
+api_combobox.set("Выберите API")  # значение по умолчанию
+api_combobox.pack(pady=10)
+
+# Кнопка получения данных
+ttk.Button(root, text="Получить курс", command=on_fetch).pack(pady=10)
 
 # Запуск приложения
-window.mainloop()
+root.mainloop()
