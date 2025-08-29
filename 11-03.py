@@ -68,7 +68,6 @@ def check_internet_connection(url="http://www.google.com", timeout=5):
         return 200 <= response.status_code < 300
     except requests.exceptions.RequestException as ex:
         # Перехватывает все ошибки requests: ConnectionError, Timeout, HTTPError и др.
-        # print(f"Ошибка HTTP-запроса: {ex}")
         messagebox.showerror("Ошибка подключения", f"Ошибка подключения к интернету: {ex}")
         return False
     
@@ -117,7 +116,6 @@ def get_exchange_rate(additional_currency_code):
         if api_status != 'success':
              error_msg = f"ER-API: Неуспешный статус ответа: {api_status}"
              error_messages.append(error_msg)
-             # print(error_msg)
              raise Exception(error_msg)
 
         # Извлекаем курс
@@ -129,12 +127,10 @@ def get_exchange_rate(additional_currency_code):
         else:
              error_msg = f"ER-API: Курс {BASE_CURRENCY_CODE} к {additional_currency_code} не найден в ответе API"
              error_messages.append(error_msg)
-             # print(error_msg)
 
     except Exception as e:
         error_msg = f"ER-API: Ошибка при получении курса {BASE_CURRENCY_CODE} к {additional_currency_code}: {e}"
         error_messages.append(error_msg)
-        # print(error_msg)
 
     # --- Если оба источника не дали результата ---
     # Формируем сообщение об ошибке, включая ошибки от обоих источников
@@ -142,7 +138,6 @@ def get_exchange_rate(additional_currency_code):
     if error_messages:
         combined_error_msg += "\nДетали:\n" + "\n".join(error_messages)
 
-    # print(combined_error_msg) # Опционально: логирование
     messagebox.showerror("Ошибка получения курса", combined_error_msg)
     return None
     
@@ -204,6 +199,7 @@ def get_binance_data(additional_currency_code, usd_to_additional_rate):
         # print(f"Ошибка Binance: {str(e)}")
         messagebox.showerror("Ошибка Binance", f"Ошибка Binance: {str(e)}")
         return None
+    
 def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
     """Получаем данные по заданным криптовалютам с CoinGecko относительно USD и дополнительной валюты"""
     if usd_to_additional_rate is None and additional_currency_code != BASE_CURRENCY_CODE:
@@ -281,6 +277,7 @@ def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
         # print(f"Ошибка CoinGecko: {str(e)}")
         messagebox.showerror("Ошибка CoinGecko", f"Ошибка CoinGecko: {str(e)}")
         return None
+    
 def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
     """Получаем данные по заданным криптовалютам с CryptoCompare относительно USD и дополнительной валюты"""
     if usd_to_additional_rate is None and additional_currency_code != BASE_CURRENCY_CODE:
@@ -327,6 +324,7 @@ def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
         # print(f"Ошибка CryptoCompare: {str(e)}")
         messagebox.showerror("Ошибка CryptoCompare", f"Ошибка CryptoCompare: {str(e)}")
         return None
+    
 # --- Функции интерфейса ---
 def show_result_window(api_name, title, data, additional_currency_code, usd_to_additional_rate):
     """Создает или обновляет окно с таблицей для отображения результата"""
@@ -336,7 +334,7 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
         update_result_window(result_windows[api_name], title, data)
     else:
         # Если окно не существует, создаем новое
-        result_window = tk.Toplevel(root)
+        result_window = tk.Toplevel(main_window)
         result_window.title(f"Результаты: {title}") # Устанавливаем начальный заголовок
         result_window.geometry("1000x650") # Увеличен размер окна для новых элементов
         # Сохраняем ссылку на окно и данные для автообновления
@@ -367,7 +365,6 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
         result_window.manual_update_btn = manual_update_btn
         # Progress bar (изначально скрыт)
         progress_bar = ttk.Progressbar(control_frame, mode='indeterminate', length=100)
-        # progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         # Скрываем изначально, будем показывать только во время загрузки
         result_window.progress_bar = progress_bar
         # Создаем фрейм для таблицы с возможностью прокрутки
@@ -554,12 +551,12 @@ def on_get_data():
     else:
         messagebox.showwarning("Предупреждение", "Пожалуйста, выберите источник данных.")
 # --- Создание основного окна ---
-root = tk.Tk()
-root.title("Курсы криптовалют")
-root.geometry("400x250") # Увеличен размер окна для размещения всех элементов
-root.resizable(False, False)  # Запрет изменения размера
+main_window = tk.Tk()
+main_window.title("Курсы криптовалют")
+main_window.geometry("400x250") # Увеличен размер окна для размещения всех элементов
+main_window.resizable(False, False)  # Запрет изменения размера
 # Создание и размещение элементов интерфейса
-main_frame = ttk.Frame(root, padding="20")
+main_frame = ttk.Frame(main_window, padding="20")
 main_frame.pack(fill=tk.BOTH, expand=True)
 # Информация о базовой валюте
 base_currency_label = ttk.Label(main_frame, text="Базовая валюта: Доллар США (USD)", font=('Arial', 10))
@@ -585,4 +582,4 @@ api_combobox.pack(anchor=tk.CENTER, pady=(0, 15)) # Выравнивание п�
 get_data_btn = ttk.Button(main_frame, text="Получить данные", command=on_get_data)
 get_data_btn.pack(anchor=tk.CENTER) # Выравнивание по центру
 # Запуск главного цикла событий
-root.mainloop()
+main_window.mainloop()

@@ -7,21 +7,20 @@ import requests
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
-
 # --- Маппинг кодов к полным названиям криптовалют ---
 CRYPTO_NAMES = {
     'BTC': 'Bitcoin',
     'ETH': 'Ethereum',
     'BNB': 'Binance Coin',
     'SOL': 'Solana',
-    'XRP': 'XRP', # Полное имя уже включено в тикер
+    'XRP': 'Ripple',
     'ADA': 'Cardano',
     'AVAX': 'Avalanche',
     'DOGE': 'Dogecoin',
     'DOT': 'Polkadot',
     'TRX': 'Tron',
     'LINK': 'Chainlink',
-    'MATIC': 'Polygon', # Полное имя уже включено в тикер
+    'MATIC': 'Polygon',
     'SHIB': 'Shiba Inu',
     'LTC': 'Litecoin',
     'BCH': 'Bitcoin Cash',
@@ -53,8 +52,8 @@ TARGET_CRYPTOS = [
 ]
 # --- Словарь для хранения ссылок на открытые окна результатов ---
 result_windows = {}
-
 # --- Функция проверки подключения к интернету (способ: HTTP-запрос) ---
+
 def check_internet_connection(url="http://www.google.com", timeout=5):
     """
     Проверяет подключение к интернету, пытаясь выполнить GET-запрос к указанному URL.
@@ -68,10 +67,9 @@ def check_internet_connection(url="http://www.google.com", timeout=5):
         return 200 <= response.status_code < 300
     except requests.exceptions.RequestException as ex:
         # Перехватывает все ошибки requests: ConnectionError, Timeout, HTTPError и др.
-        # print(f"Ошибка HTTP-запроса: {ex}")
         messagebox.showerror("Ошибка подключения", f"Ошибка подключения к интернету: {ex}")
         return False
-    
+
 # --- Функции для получения данных из API ---
 def get_exchange_rate(additional_currency_code):
     """
@@ -80,10 +78,8 @@ def get_exchange_rate(additional_currency_code):
     """
     if additional_currency_code == BASE_CURRENCY_CODE:
         return 1.0
-
     rate = None
     error_messages = [] # Список для хранения сообщений об ошибках от разных API
-
     # --- Попытка 1: CryptoCompare ---
     try:
         url = f'https://min-api.cryptocompare.com/data/price'
@@ -103,7 +99,6 @@ def get_exchange_rate(additional_currency_code):
     except Exception as e:
         error_msg = f"CryptoCompare: Ошибка при получении курса {BASE_CURRENCY_CODE} к {additional_currency_code}: {e}"
         error_messages.append(error_msg)
-
     # --- Попытка 2: ER-API (резервный вариант) ---
     try:
         # ER-API требует USD в параметре to, а не from. Получаем все курсы USD.
@@ -111,41 +106,31 @@ def get_exchange_rate(additional_currency_code):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-
         # Проверяем статус ответа API
         api_status = data.get('result')
         if api_status != 'success':
              error_msg = f"ER-API: Неуспешный статус ответа: {api_status}"
              error_messages.append(error_msg)
-             # print(error_msg)
              raise Exception(error_msg)
-
         # Извлекаем курс
         rates = data.get('rates', {})
         rate = rates.get(additional_currency_code)
-
         if rate:
             return rate # Успешно получили курс с резервного источника, возвращаем
         else:
              error_msg = f"ER-API: Курс {BASE_CURRENCY_CODE} к {additional_currency_code} не найден в ответе API"
              error_messages.append(error_msg)
-             # print(error_msg)
-
     except Exception as e:
         error_msg = f"ER-API: Ошибка при получении курса {BASE_CURRENCY_CODE} к {additional_currency_code}: {e}"
         error_messages.append(error_msg)
-        # print(error_msg)
-
     # --- Если оба источника не дали результата ---
     # Формируем сообщение об ошибке, включая ошибки от обоих источников
     combined_error_msg = f"Не удалось получить курс {BASE_CURRENCY_CODE} к {additional_currency_code} ни из одного источника."
     if error_messages:
         combined_error_msg += "\nДетали:\n" + "\n".join(error_messages)
-
-    # print(combined_error_msg) # Опционально: логирование
     messagebox.showerror("Ошибка получения курса", combined_error_msg)
     return None
-    
+
 def get_binance_data(additional_currency_code, usd_to_additional_rate):
     """Получаем данные по заданным криптовалютам с Binance относительно USD и дополнительной валюты"""
     if usd_to_additional_rate is None and additional_currency_code != BASE_CURRENCY_CODE:
@@ -195,15 +180,13 @@ def get_binance_data(additional_currency_code, usd_to_additional_rate):
                     price_btc = price_dict[pair]
                     # Для BTC пары пересчет сложнее, пропустим для простоты или добавим позже
                     # Здесь можно добавить логику пересчета BTC->USD->доп.валюта
-                    # Пока пропускаем BTC пары для соответствия с другими API
+                    # Пропускаем BTC пары для соответствия с другими API
                     pass
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка Binance", f"Не удалось получить данные: {str(e)}")
-        # Не показываем ошибку в основном окне при автообновлении
-        # print(f"Ошибка Binance: {str(e)}")
         messagebox.showerror("Ошибка Binance", f"Ошибка Binance: {str(e)}")
         return None
+
 def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
     """Получаем данные по заданным криптовалютам с CoinGecko относительно USD и дополнительной валюты"""
     if usd_to_additional_rate is None and additional_currency_code != BASE_CURRENCY_CODE:
@@ -249,7 +232,7 @@ def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
         id_to_crypto = {v: k for k, v in coingecko_ids.items()}
         # Создаем упорядоченный список результатов
         result = [None] * len(TARGET_CRYPTOS)
-        for coin in data: # <-- Исправлено: добавлено тело цикла
+        for coin in data:
             if coin['id'] in id_to_crypto:
                 crypto_code = id_to_crypto[coin['id']]
                 if crypto_code in TARGET_CRYPTOS:
@@ -276,11 +259,9 @@ def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
         result = [item for item in result if item is not None]
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка CoinGecko", f"Не удалось получить данные: {str(e)}")
-        # Не показываем ошибку в основном окне при автообновлении
-        # print(f"Ошибка CoinGecko: {str(e)}")
         messagebox.showerror("Ошибка CoinGecko", f"Ошибка CoinGecko: {str(e)}")
         return None
+
 def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
     """Получаем данные по заданным криптовалютам с CryptoCompare относительно USD и дополнительной валюты"""
     if usd_to_additional_rate is None and additional_currency_code != BASE_CURRENCY_CODE:
@@ -299,7 +280,7 @@ def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
         result = []
         # Перебираем криптовалюты в заданном порядке
         for crypto_code in TARGET_CRYPTOS:
-            if crypto_code in data: # <-- Исправлено: добавлено тело условия
+            if crypto_code in data:
                 full_name = CRYPTO_NAMES.get(crypto_code, crypto_code)
                 # Получаем цену в USD
                 if BASE_CURRENCY_CODE in data[crypto_code] and data[crypto_code][BASE_CURRENCY_CODE]:
@@ -322,11 +303,9 @@ def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
                     })
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка CryptoCompare", f"Не удалось получить данные: {str(e)}")
-        # Не показываем ошибку в основном окне при автообновлении
-        # print(f"Ошибка CryptoCompare: {str(e)}")
         messagebox.showerror("Ошибка CryptoCompare", f"Ошибка CryptoCompare: {str(e)}")
         return None
+
 # --- Функции интерфейса ---
 def show_result_window(api_name, title, data, additional_currency_code, usd_to_additional_rate):
     """Создает или обновляет окно с таблицей для отображения результата"""
@@ -336,7 +315,7 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
         update_result_window(result_windows[api_name], title, data)
     else:
         # Если окно не существует, создаем новое
-        result_window = tk.Toplevel(root)
+        result_window = tk.Toplevel(main_window)
         result_window.title(f"Результаты: {title}") # Устанавливаем начальный заголовок
         result_window.geometry("1000x650") # Увеличен размер окна для новых элементов
         # Сохраняем ссылку на окно и данные для автообновления
@@ -365,11 +344,6 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
                                       command=lambda: manual_update(result_window))
         manual_update_btn.pack(side=tk.LEFT, padx=(0, 10))
         result_window.manual_update_btn = manual_update_btn
-        # Progress bar (изначально скрыт)
-        progress_bar = ttk.Progressbar(control_frame, mode='indeterminate', length=100)
-        # progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-        # Скрываем изначально, будем показывать только во время загрузки
-        result_window.progress_bar = progress_bar
         # Создаем фрейм для таблицы с возможностью прокрутки
         table_frame = ttk.Frame(result_window)
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 5))
@@ -381,10 +355,12 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
         # Определяем заголовки столбцов
         tree.heading('name', text='Название')
         tree.heading('ticker', text='Тикер')
-        tree.heading('price', text=f'Курс ({BASE_CURRENCY_NAME})')
-        tree.heading('currency', text=f'Валюта ({BASE_CURRENCY_NAME})')
+        tree.heading('price', text='Курс')
+        tree.heading('currency', text='Доллар США')
         tree.heading('price_additional', text='Курс (Доп. валюта)')
-        tree.heading('currency_additional', text='Валюта (Доп. валюта)')
+        # Получаем полное название дополнительной валюты для заголовка
+        additional_currency_name = ADDITIONAL_CURRENCY_NAMES.get(additional_currency_code, additional_currency_code)
+        tree.heading('currency_additional', text=additional_currency_name)
         # Устанавливаем ширину столбцов
         tree.column('name', width=200, anchor=tk.W)
         tree.column('ticker', width=70, anchor=tk.CENTER)
@@ -415,6 +391,7 @@ def show_result_window(api_name, title, data, additional_currency_code, usd_to_a
             result_windows.pop(api_name, None)  # Удаляем ссылку на окно
             result_window.destroy()
         result_window.protocol("WM_DELETE_WINDOW", on_closing)
+
 def update_result_window(window, title, data):
     """Обновляет содержимое существующего окна результатов (включая заголовок)"""
     # Обновляем заголовок окна
@@ -431,9 +408,10 @@ def update_result_window(window, title, data):
     # Поднимаем окно на передний план
     window.lift()
     window.focus_force()
+
 def update_treeview(tree, data):
     """Заполняет Treeview данными"""
-    for item in data: # <-- Исправлено: добавлено тело цикла
+    for item in data:
         # Форматируем цены с двумя знаками после запятой
         formatted_price = f"{item['price']:.2f}"
         formatted_price_additional = f"{item['price_additional']:.2f}"
@@ -445,6 +423,7 @@ def update_treeview(tree, data):
             formatted_price_additional,
             item['currency_additional']
         ))
+
 def toggle_auto_update(window, button):
     """Включает или выключает автообновление для окна"""
     if window.is_auto_updating:
@@ -453,7 +432,6 @@ def toggle_auto_update(window, button):
         if window.update_job:
             window.after_cancel(window.update_job)
         button.config(text="Включить автообновление")
-        # window.progress_bar.pack_forget() # Скрываем progress bar
     else:
         # Включаем автообновление
         try:
@@ -467,28 +445,25 @@ def toggle_auto_update(window, button):
         button.config(text="Выключить автообновление")
         # Запускаем цикл автообновления
         auto_update_loop(window, interval_minutes * 60 * 1000) # Преобразуем минуты в миллисекунды
+
 def manual_update(window):
     """Выполняет ручное обновление данных"""
-    # Показываем progress bar
-    window.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-    window.progress_bar.start(10) # Запускаем анимацию
     window.manual_update_btn.config(state='disabled') # Блокируем кнопку во время обновления
     window.auto_update_btn.config(state='disabled') # Блокируем кнопку автообновления
     # Обновляем данные синхронно (без потоков)
     fetch_and_update_data(window, is_manual=True)
+
 def auto_update_loop(window, interval_ms):
     """Цикл автообновления данных"""
     if not window.winfo_exists() or not window.is_auto_updating:
         return
-    # Показываем progress bar
-    window.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-    window.progress_bar.start(10) # Запускаем анимацию
     window.manual_update_btn.config(state='disabled') # Блокируем кнопку во время обновления
     window.auto_update_btn.config(state='disabled') # Блокируем кнопку автообновления (на всякий случай)
     # Обновляем данные синхронно (без потоков)
     fetch_and_update_data(window)
     # Планируем следующее обновление
     window.update_job = window.after(int(interval_ms), lambda: auto_update_loop(window, interval_ms))
+
 def fetch_and_update_data(window, is_manual=False):
     """Получает новые данные и обновляет окно (выполняется в основном потоке)"""
     api_name = window.api_name
@@ -505,11 +480,9 @@ def fetch_and_update_data(window, is_manual=False):
         new_data = None
     # Обновляем GUI
     update_gui_after_fetch(window, new_data, api_name, additional_currency_code, is_manual)
+
 def update_gui_after_fetch(window, data, api_name, additional_currency_code, is_manual):
     """Обновляет GUI после получения данных (выполняется в основном потоке)"""
-    # Останавливаем и скрываем progress bar
-    window.progress_bar.stop()
-    window.progress_bar.pack_forget() # Скрываем progress bar
     window.manual_update_btn.config(state='normal') # Разблокируем кнопку ручного обновления
     window.auto_update_btn.config(state='normal') # Разблокируем кнопку автообновления
     # Обновляем данные в окне
@@ -524,6 +497,7 @@ def update_gui_after_fetch(window, data, api_name, additional_currency_code, is_
             window.count_and_time_label.config(text=f"Всего записей: {window.tree.get_children().__len__()} | Последнее обновление: {current_time} (Ошибка при обновлении)")
         else:
             messagebox.showerror("Ошибка обновления", "Не удалось получить данные для ручного обновления.")
+
 def on_get_data():
     """Обработчик нажатия кнопки 'Получить данные'"""
     # Проверка подключения к интернету
@@ -553,13 +527,14 @@ def on_get_data():
         show_result_window("CryptoCompare", window_title, data, selected_additional_currency_code, usd_to_additional_rate)
     else:
         messagebox.showwarning("Предупреждение", "Пожалуйста, выберите источник данных.")
+
 # --- Создание основного окна ---
-root = tk.Tk()
-root.title("Курсы криптовалют")
-root.geometry("400x250") # Увеличен размер окна для размещения всех элементов
-root.resizable(False, False)  # Запрет изменения размера
+main_window = tk.Tk()
+main_window.title("Курсы криптовалют")
+main_window.geometry("400x250") # Увеличен размер окна для размещения всех элементов
+main_window.resizable(False, False)  # Запрет изменения размера
 # Создание и размещение элементов интерфейса
-main_frame = ttk.Frame(root, padding="20")
+main_frame = ttk.Frame(main_window, padding="20")
 main_frame.pack(fill=tk.BOTH, expand=True)
 # Информация о базовой валюте
 base_currency_label = ttk.Label(main_frame, text="Базовая валюта: Доллар США (USD)", font=('Arial', 10))
@@ -585,4 +560,4 @@ api_combobox.pack(anchor=tk.CENTER, pady=(0, 15)) # Выравнивание п�
 get_data_btn = ttk.Button(main_frame, text="Получить данные", command=on_get_data)
 get_data_btn.pack(anchor=tk.CENTER) # Выравнивание по центру
 # Запуск главного цикла событий
-root.mainloop()
+main_window.mainloop()
