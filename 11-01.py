@@ -91,8 +91,7 @@ def get_exchange_rate(additional_currency_code):
              raise ValueError(f"Курс {BASE_CURRENCY_CODE} к {additional_currency_code} не найден в ответе API")
     except Exception as e:
         # print(f"Ошибка при получении курса {BASE_CURRENCY_CODE} к {additional_currency_code}: {e}")
-        # messagebox.showerror("Ошибка", f"Не удалось получить курс {BASE_CURRENCY_CODE} к {additional_currency_code}:
-{str(e)}")
+        # messagebox.showerror("Ошибка", f"Не удалось получить курс {BASE_CURRENCY_CODE} к {additional_currency_code}: {str(e)}")
         # Не показываем ошибку в основном окне при автообновлении
         messagebox.showerror("Ошибка получения курса", f"Ошибка при получении курса {BASE_CURRENCY_CODE} к {additional_currency_code}: {e}")
         return None
@@ -149,8 +148,7 @@ def get_binance_data(additional_currency_code, usd_to_additional_rate):
                     pass
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка Binance", f"Не удалось получить данные:
-{str(e)}")
+        # messagebox.showerror("Ошибка Binance", f"Не удалось получить данные: {str(e)}")
         # Не показываем ошибку в основном окне при автообновлении
         # print(f"Ошибка Binance: {str(e)}")
         messagebox.showerror("Ошибка Binance", f"Ошибка Binance: {str(e)}")
@@ -227,8 +225,7 @@ def get_coingecko_data(additional_currency_code, usd_to_additional_rate):
         result = [item for item in result if item is not None]
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка CoinGecko", f"Не удалось получить данные:
-{str(e)}")
+        # messagebox.showerror("Ошибка CoinGecko", f"Не удалось получить данные: {str(e)}")
         # Не показываем ошибку в основном окне при автообновлении
         # print(f"Ошибка CoinGecko: {str(e)}")
         messagebox.showerror("Ошибка CoinGecko", f"Ошибка CoinGecko: {str(e)}")
@@ -274,8 +271,7 @@ def get_cryptocompare_data(additional_currency_code, usd_to_additional_rate):
                     })
         return result
     except Exception as e:
-        # messagebox.showerror("Ошибка CryptoCompare", f"Не удалось получить данные:
-{str(e)}")
+        # messagebox.showerror("Ошибка CryptoCompare", f"Не удалось получить данные: {str(e)}")
         # Не показываем ошибку в основном окне при автообновлении
         # print(f"Ошибка CryptoCompare: {str(e)}")
         messagebox.showerror("Ошибка CryptoCompare", f"Ошибка CryptoCompare: {str(e)}")
